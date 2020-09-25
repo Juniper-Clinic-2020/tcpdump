@@ -143,8 +143,10 @@ struct icmp {
 #define	ICMP_IREQREPLY		16		/* information reply */
 #define	ICMP_MASKREQ		17		/* address mask request */
 #define	ICMP_MASKREPLY		18		/* address mask reply */
+#define	ICMP_EXTEHCO		42		/* extended echo request */
+#define	ICMP_EXTEHCOREPLY	43		/* extended echo reply */
 
-#define	ICMP_MAXTYPE		18
+#define	ICMP_MAXTYPE		161
 
 #define ICMP_ERRTYPE(type) \
 	((type) == ICMP_UNREACH || (type) == ICMP_SOURCEQUENCH || \
@@ -199,6 +201,8 @@ static const struct tok icmp2str[] = {
 	{ ICMP_IREQ,			"information request" },
 	{ ICMP_IREQREPLY,		"information reply" },
 	{ ICMP_MASKREQ,			"address mask request" },
+	{ ICMP_MASKREQ,			"extended echo (PROBE) request" },
+	{ ICMP_MASKREQ,			"etended echo (PROBE) reply" },
 	{ 0,				NULL }
 };
 
@@ -314,7 +318,7 @@ icmp_print(netdissect_options *ndo, const u_char *bp, u_int plen, const u_char *
 
 	ndo->ndo_protocol = "icmp";
 	dp = (const struct icmp *)bp;
-        ext_dp = (const struct icmp_ext_t *)bp;
+    ext_dp = (const struct icmp_ext_t *)bp;
 	ip = (const struct ip *)bp2;
 	str = buf;
 
@@ -628,6 +632,22 @@ icmp_print(netdissect_options *ndo, const u_char *bp, u_int plen, const u_char *
                 (void)snprintf(buf+strlen(buf),sizeof(buf)-strlen(buf),", xmit %s",
                          icmp_tstamp_print(GET_BE_U_4(dp->icmp_ttime)));
                 break;
+
+	case ICMP_EXTEHCO:
+		(void)snprintf(buf, sizeof(buf), "PROBE request");
+		break;
+
+	case ICMP_EXTEHCOREPLY:
+		(void)snprintf(buf, sizeof(buf), "PROBE reply, id %u, seq %u", 
+			GET_BE_U_2(dp->icmp_id), GET_BE_U_2(dp->icmp_seq));
+		// // 
+		// 		(void)snprintf(buf, sizeof(buf), "echo %s, id %u, seq %u",
+        //                        icmp_type == ICMP_ECHO ?
+        //                        "request" : "reply",
+        //                        GET_BE_U_2(dp->icmp_id),
+        //                        GET_BE_U_2(dp->icmp_seq));
+
+		break;
 
 	default:
 		str = tok2str(icmp2str, "type-#%u", icmp_type);

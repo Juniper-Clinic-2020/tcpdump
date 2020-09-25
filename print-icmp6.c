@@ -132,6 +132,8 @@ struct icmp6_hdr {
 #define ICMP6_HADISCOV_REPLY		145
 #define ICMP6_MOBILEPREFIX_SOLICIT	146
 #define ICMP6_MOBILEPREFIX_ADVERT	147
+#define	ICMP6_EXTENDED_ECHO_REPLY	160		/* extended echo reply */
+#define	ICMP6_EXTENDED_ECHO_REQUEST	161		/* extended echo request */
 
 #define MLD6_MTRACE_RESP		200	/* mtrace response(to sender) */
 #define MLD6_MTRACE			201	/* mtrace messages */
@@ -677,6 +679,8 @@ static const struct tok icmp6_type_values[] = {
     { MLD6_MTRACE, "mtrace message"},
     { MLD6_MTRACE_RESP, "mtrace response"},
     { ND_RPL_MESSAGE,   "RPL"},
+    { ICMP6_EXTENDED_ECHO_REPLY,   "extended echo (PROBE) reply"},
+    { ICMP6_EXTENDED_ECHO_REQUEST,   "extended echo (PROBE) request"},
     { 0,	NULL }
 };
 
@@ -725,6 +729,27 @@ static const struct tok icmp6_opt_values[] = {
    { ND_OPT_ROUTE_INFO, "route info"},
    { 0,	NULL }
 };
+
+static const struct tok icmp6_ext_echo_reply_code_str[] = {
+    { 0, "No error"},
+    { 1, "Malformed Query"},
+    { 2, "No Such Interface"},
+    { 3, "No Such Table Entry"},
+    { 4, "Multiple Interfaces Satisfy Query"},
+    { 0, NULL}
+};
+
+static const struct tok icmp6_ext_echo_reply_state_str[] = {
+    { 0, "Reserved"},
+    { 1, "Incomplete"},
+    { 2, "Reachable"},
+    { 3, "Stale"},
+    { 4, "Delay"},
+    { 5, "Probe"},
+    { 6, "Failed"},
+    { 0, NULL}
+};
+
 
 /* mldv2 report types */
 static const struct tok mldv2report2str[] = {
@@ -1171,6 +1196,9 @@ icmp6_print(netdissect_options *ndo,
                 /* The check below covers both icmp6_id and icmp6_seq. */
                 ND_PRINT(", id %u, seq %u", GET_BE_U_2(dp->icmp6_id),
 			 GET_BE_U_2(dp->icmp6_seq));
+		break;
+	case ICMP6_EXTENDED_ECHO_REPLY:
+		ND_PRINT(", %s", tok2str(icmp6_ext_echo_reply_code_str, "unknown echo request code (%u)",icmp6_code));
 		break;
 	case ICMP6_MEMBERSHIP_QUERY:
 		if (length == MLD_MINLEN) {
