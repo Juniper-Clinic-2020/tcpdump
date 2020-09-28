@@ -6,8 +6,8 @@ language: c
 # on Litle-endian PowerPC/Power ISA does some things that require more
 # careful adherence to the documentation, so it's useful for testing
 # that.
-#
-arch:
+# 
+arch: 
   - amd64
   - ppc64le
   - s390x
