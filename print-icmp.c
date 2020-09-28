@@ -845,7 +845,7 @@ icmp_print(netdissect_options *ndo, const u_char *bp, u_int plen, const u_char *
 						offset += 1 + GET_U_1(ifname_subobj->length);
 					}
 					if (mtu_flag) {
-						ND_PRINT("\n\t\t MTU: %u", (unsigned int)offset);
+						ND_PRINT("\n\t\t MTU: %u", GET_BE_U_4(offset));
 						offset += 4;
 					}
 
