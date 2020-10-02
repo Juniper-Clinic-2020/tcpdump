@@ -98,7 +98,7 @@ struct icmp {
  * ip header length.
  */
 #define	ICMP_MINLEN	8				/* abs minimum */
-#define ICMP_EXTD_MINLEN (156 - sizeof (struct ip))   /* draft-bonica-internet-icmp-08 */
+#define ICMP_EXTD_MINLEN (156 - sizeof (struct ip))    /* draft-bonica-internet-icmp-08 */
 #define	ICMP_TSLEN	(8 + 3 * sizeof (uint32_t))	/* timestamp */
 #define	ICMP_MASKLEN	12				/* address mask */
 #define	ICMP_ADVLENMIN	(8 + sizeof (struct ip) + 8)	/* min */
@@ -188,10 +188,11 @@ struct icmp {
 #define ICMP_UNREACH_PRECEDENCE_CUTOFF	15	/* precedence cutoff */
 #endif
 
-/*  */
-#define MPLS_EXTENDED_PAYLOAD_OBJECT_CLASS       0
+/* rfc4950  */
 #define MPLS_STACK_ENTRY_OBJECT_CLASS            1
+/* rfc5837 */
 #define INTERFACE_INFORMATION_OBJECT_CLASS       2
+/* rfc8335 */
 #define INTERFACE_IDENTIFICATION_OBJECT_CLASS    3
 
 /* Most of the icmp types */
@@ -302,9 +303,9 @@ struct icmp_interface_identification_ipaddr_subobject_t {
 /*
 Interface Name Sub-Object
 octet    0        1                                   63
-		+--------+-----------................-----------------+
-		| length |   interface name octets 1-63               |
-		+--------+-----------................-----------------+
+        +--------+-----------................-----------------+
+        | length |   interface name octets 1-63               |
+        +--------+-----------................-----------------+
 */
 struct icmp_interface_identification_ifname_subobject_t {
     nd_uint8_t  length;
