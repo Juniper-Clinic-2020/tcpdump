@@ -98,7 +98,7 @@ struct icmp {
  * ip header length.
  */
 #define	ICMP_MINLEN	8				/* abs minimum */
-#define ICMP_EXTD_MINLEN (156 - sizeof (struct ip))    /* draft-bonica-internet-icmp-08 */
+#define ICMP_EXTD_MINLEN (156 - sizeof (struct ip))     /* draft-bonica-internet-icmp-08 */
 #define	ICMP_TSLEN	(8 + 3 * sizeof (uint32_t))	/* timestamp */
 #define	ICMP_MASKLEN	12				/* address mask */
 #define	ICMP_ADVLENMIN	(8 + sizeof (struct ip) + 8)	/* min */
