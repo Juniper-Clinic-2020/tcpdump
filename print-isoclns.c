@@ -1465,8 +1465,7 @@ isis_print_mcid(netdissect_options *ndo,
   ND_TCHECK_SIZE(mcid);
   ND_PRINT("ID: %u, Name: ", GET_U_1(mcid->format_id));
 
-  if (nd_printzp(ndo, mcid->name, 32, ndo->ndo_snapend))
-      goto trunc;
+  nd_printjnp(ndo, mcid->name, sizeof(mcid->name));
 
   ND_PRINT("\n\t              Lvl: %u", GET_BE_U_2(mcid->revision_lvl));
 
@@ -2308,9 +2307,8 @@ isis_print_extd_ip_reach(netdissect_options *ndo,
 
     byte_length = (bit_length + 7) / 8; /* prefix has variable length encoding */
 
-    ND_TCHECK_LEN(tptr, byte_length);
     memset(prefix, 0, sizeof(prefix));   /* clear the copy buffer */
-    memcpy(prefix,tptr,byte_length);    /* copy as much as is stored in the TLV */
+    GET_CPY_BYTES(prefix,tptr,byte_length);    /* copy as much as is stored in the TLV */
     tptr+=byte_length;
     processed+=byte_length;
 
@@ -2361,8 +2359,6 @@ isis_print_extd_ip_reach(netdissect_options *ndo,
         }
     }
     return (processed);
-trunc:
-    return 0;
 }
 
 static void
@@ -3120,8 +3116,7 @@ isis_print(netdissect_options *ndo,
 
 	    switch (auth_type) {
 	    case ISIS_SUBTLV_AUTH_SIMPLE:
-		if (nd_printzp(ndo, tptr, tlen, ndo->ndo_snapend))
-		    goto trunc;
+		nd_printjnp(ndo, tptr, tlen);
 		break;
 	    case ISIS_SUBTLV_AUTH_MD5:
 		for(i=0;i<tlen;i++) {
@@ -3248,8 +3243,7 @@ isis_print(netdissect_options *ndo,
 
 	case ISIS_TLV_HOSTNAME:
 	    ND_PRINT("\n\t      Hostname: ");
-	    if (nd_printzp(ndo, tptr, tlen, ndo->ndo_snapend))
-		goto trunc;
+	    nd_printjnp(ndo, tptr, tlen);
 	    break;
 
 	case ISIS_TLV_SHARED_RISK_GROUP:

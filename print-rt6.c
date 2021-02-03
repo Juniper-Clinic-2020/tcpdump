@@ -27,8 +27,6 @@
 
 #include "netdissect-stdinc.h"
 
-#include <string.h>
-
 #include "netdissect.h"
 #include "addrtoname.h"
 #include "extract.h"
@@ -71,8 +69,10 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 			    GET_BE_U_4(dp0->ip6r0_reserved));
 		}
 
-		if (len % 2 == 1)
-			goto trunc;
+		if (len % 2 == 1) {
+			ND_PRINT(" (invalid length %u)", len);
+			goto invalid;
+		}
 		len >>= 1;
 		p = (const u_char *) dp0->ip6r0_addr;
 		for (i = 0; i < len; i++) {
@@ -94,8 +94,10 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 
 		ND_PRINT(", tag=%x", GET_BE_U_2(srh->srh_tag));
 
-		if (len % 2 == 1)
-			goto trunc;
+		if (len % 2 == 1) {
+			ND_PRINT(" (invalid length %u)", len);
+			goto invalid;
+		}
 		len >>= 1;
 		p  = (const u_char *) srh->srh_segments;
 		for (i = 0; i < len; i++) {
@@ -165,9 +167,36 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 	default:
 		goto trunc;
 		break;
+
+	case IPV6_RTHDR_TYPE_6:
+		crh32 = (const struct ip6_crh32 *)dp;
+		sids_per_word = 2;
+		sid_count = len * 2 + 1; 
+		if (GET_U_1(crh32->crh32_segleft) <= 1) {
+			min_crh_len = 0;	
+		}
+		ND_PRINT(", (crh16) there are %u SID's, ", sid_count);
+
+		if (min_crh_len) {
+			min_crh_len = ((GET_U_1(crh32->crh32_segleft) - 1) / sids_per_word);
+			if ((GET_U_1(crh32->crh32_segleft) - 1) % sids_per_word) {
+				min_crh_len++;
+			}
+		}
+
+		if (min_crh_len > len) {
+			ND_PRINT("IPv6 CRH min length must not exceed header length of %u", len);
+		}
+		ND_PRINT(") ");
+		return((GET_U_1(crh32->crh32_len) + 1) << 3);
+		break;
+
+	default:
+		ND_PRINT(" (unknown type)");
+		goto invalid;
 	}
 
- trunc:
-	nd_print_trunc(ndo);
+invalid:
+	nd_print_invalid(ndo);
 	return -1;
 }

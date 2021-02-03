@@ -92,7 +92,7 @@ struct icmp {
 /*
  * Lower bounds on packet lengths for various types.
  * For the error advice packets must first insure that the
- * packet is large enought to contain the returned ip header.
+ * packet is large enough to contain the returned ip header.
  * Only then can we do the check to see if 64 bits of packet
  * data have been returned, since we need to check the returned
  * ip header length.
@@ -226,7 +226,7 @@ struct id_rdiscovery {
  * The Destination Unreachable, Time Exceeded
  * and Parameter Problem messages are slightly changed as per
  * the above draft. A new Length field gets added to give
- * the caller an idea about the length of the piggypacked
+ * the caller an idea about the length of the piggybacked
  * IP packet before the MPLS extension header starts.
  *
  * The Length field represents length of the padded "original datagram"
@@ -648,7 +648,7 @@ icmp_print(netdissect_options *ndo, const u_char *bp, u_int plen, const u_char *
 
         /*
          * print the remnants of the IP packet.
-         * save the snaplength as this may get overidden in the IP printer.
+         * save the snaplength as this may get overridden in the IP printer.
          */
 	if (ndo->ndo_vflag >= 1 && ICMP_ERRTYPE(icmp_type)) {
 		bp += 8;
@@ -738,7 +738,7 @@ icmp_print(netdissect_options *ndo, const u_char *bp, u_int plen, const u_char *
                     switch(obj_ctype) {
                     case 1:
                         raw_label = GET_BE_U_4(obj_tptr);
-                        ND_PRINT("\n\t    label %u, exp %u", MPLS_LABEL(raw_label), MPLS_EXP(raw_label));
+                        ND_PRINT("\n\t    label %u, tc %u", MPLS_LABEL(raw_label), MPLS_TC(raw_label));
                         if (MPLS_STACK(raw_label))
                             ND_PRINT(", [S]");
                         ND_PRINT(", ttl %u", MPLS_TTL(raw_label));

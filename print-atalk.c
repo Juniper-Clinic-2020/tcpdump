@@ -30,13 +30,87 @@
 #include <stdio.h>
 #include <string.h>
 
+#define ND_LONGJMP_FROM_TCHECK
 #include "netdissect.h"
 #include "addrtoname.h"
 #include "ethertype.h"
 #include "extract.h"
 #include "appletalk.h"
 
+/* Datagram Delivery Protocol */
 
+struct atDDP {
+	nd_uint16_t	length;
+	nd_uint16_t	checksum;
+	nd_uint16_t	dstNet;
+	nd_uint16_t	srcNet;
+	nd_uint8_t	dstNode;
+	nd_uint8_t	srcNode;
+	nd_uint8_t	dstSkt;
+	nd_uint8_t	srcSkt;
+	nd_uint8_t	type;
+};
+#define	ddpSize		13
+
+struct atShortDDP {
+	nd_uint16_t	length;
+	nd_uint8_t	dstSkt;
+	nd_uint8_t	srcSkt;
+	nd_uint8_t	type;
+};
+#define	ddpSSize	5
+
+/* AppleTalk Transaction Protocol */
+
+struct atATP {
+	nd_uint8_t	control;
+	nd_uint8_t	bitmap;
+	nd_uint16_t	transID;
+	nd_uint32_t	userData;
+};
+
+#define	atpReqCode	0x40
+#define	atpRspCode	0x80
+#define	atpRelCode	0xC0
+#define	atpXO		0x20
+#define	atpEOM		0x10
+#define	atpSTS		0x08
+
+/* Name Binding Protocol */
+
+struct atNBP {
+	nd_uint8_t	control;
+	nd_uint8_t	id;
+};
+#define	nbpHeaderSize	2
+
+struct atNBPtuple {
+	nd_uint16_t	net;
+	nd_uint8_t	node;
+	nd_uint8_t	skt;
+	nd_uint8_t	enumerator;
+};
+#define	nbpTupleSize	5
+
+#define	nbpBrRq		0x10
+#define	nbpLkUp		0x20
+#define	nbpLkUpReply	0x30
+static const struct tok nbp_str[] = {
+	{ nbpBrRq,      "brRq"  },
+	{ nbpLkUp,      "lkup"  },
+	{ nbpLkUpReply, "reply" },
+	{ 0, NULL }
+};
+
+#define	ddpRTMP		1	/* RTMP type */
+#define	ddpNBP		2	/* NBP type */
+#define	ddpATP		3	/* ATP type */
+#define	ddpECHO		4	/* ECHO type */
+#define	ddpRTMPrequest	5	/* RTMP request type */
+#define	ddpIP		22	/* IP type */
+#define	ddpARP		23	/* ARP type */
+#define	ddpKLAP		0x4b	/* Kinetics KLAP type */
+#define	ddpEIGRP        88      /* EIGRP over Appletalk */
 static const struct tok type2str[] = {
 	{ ddpRTMP,		"rtmp" },
 	{ ddpRTMPrequest,	"rtmpReq" },
@@ -51,9 +125,9 @@ struct aarp {
 	nd_uint16_t	htype, ptype;
 	nd_uint8_t	halen, palen;
 	nd_uint16_t	op;
-	uint8_t		hsaddr[6];
+	nd_mac_addr	hsaddr;
 	uint8_t		psaddr[4];
-	uint8_t		hdaddr[6];
+	nd_mac_addr	hdaddr;
 	uint8_t		pdaddr[4];
 };
 
@@ -61,10 +135,8 @@ static void atp_print(netdissect_options *, const struct atATP *, u_int);
 static void atp_bitmap_print(netdissect_options *, u_char);
 static void nbp_print(netdissect_options *, const struct atNBP *, u_int, u_short, u_char, u_char);
 static const struct atNBPtuple *nbp_tuple_print(netdissect_options *ndo, const struct atNBPtuple *,
-						const u_char *,
 						u_short, u_char, u_char);
-static const struct atNBPtuple *nbp_name_print(netdissect_options *, const struct atNBPtuple *,
-					       const u_char *);
+static const struct atNBPtuple *nbp_name_print(netdissect_options *, const struct atNBPtuple *);
 static const char *ataddr_string(netdissect_options *, u_short, u_char);
 static void ddp_print(netdissect_options *, const u_char *, u_int, u_int, u_short, u_char, u_char);
 static const char *ddpskt_string(netdissect_options *, u_int);
@@ -76,16 +148,8 @@ void
 ltalk_if_print(netdissect_options *ndo,
                const struct pcap_pkthdr *h, const u_char *p)
 {
-	u_int hdrlen;
-
 	ndo->ndo_protocol = "ltalk";
-	hdrlen = llap_print(ndo, p, h->len);
-	if (hdrlen == 0) {
-		/* Cut short by the snapshot length. */
-		ndo->ndo_ll_hdr_len += h->caplen;
-		return;
-	}
-	ndo->ndo_ll_hdr_len += hdrlen;
+	ndo->ndo_ll_hdr_len += llap_print(ndo, p, h->len);
 }
 
 /*
@@ -103,12 +167,8 @@ llap_print(netdissect_options *ndo,
 
 	ndo->ndo_protocol = "llap";
 	if (length < sizeof(*lp)) {
-		ND_PRINT(" [|llap %u]", length);
-		return (length);
-	}
-	if (!ND_TTEST_LEN(bp, sizeof(*lp))) {
-		nd_print_trunc(ndo);
-		return (0);	/* cut short by the snapshot length */
+		ND_PRINT(" (LLAP length %u is too small)", length);
+		goto invalid;
 	}
 	lp = (const struct LAP *)bp;
 	bp += sizeof(*lp);
@@ -117,13 +177,10 @@ llap_print(netdissect_options *ndo,
 	switch (GET_U_1(lp->type)) {
 
 	case lapShortDDP:
+		ndo->ndo_protocol = "sddp";
 		if (length < ddpSSize) {
-			ND_PRINT(" [|sddp %u]", length);
-			return (length);
-		}
-		if (!ND_TTEST_LEN(bp, ddpSSize)) {
-			ND_PRINT(" [|sddp]");
-			return (0);	/* cut short by the snapshot length */
+			ND_PRINT(" (SDDP length %u is too small)", length);
+			goto invalid;
 		}
 		sdp = (const struct atShortDDP *)bp;
 		ND_PRINT("%s.%s",
@@ -140,13 +197,10 @@ llap_print(netdissect_options *ndo,
 		break;
 
 	case lapDDP:
+		ndo->ndo_protocol = "ddp";
 		if (length < ddpSize) {
-			ND_PRINT(" [|ddp %u]", length);
-			return (length);
-		}
-		if (!ND_TTEST_LEN(bp, ddpSize)) {
-			ND_PRINT(" [|ddp]");
-			return (0);	/* cut short by the snapshot length */
+			ND_PRINT(" (DDP length %u is too small)", length);
+			goto invalid;
 		}
 		dp = (const struct atDDP *)bp;
 		snet = GET_BE_U_2(dp->srcNet);
@@ -163,12 +217,6 @@ llap_print(netdissect_options *ndo,
 			  GET_U_1(dp->srcNode), GET_U_1(dp->srcSkt));
 		break;
 
-#ifdef notdef
-	case lapKLAP:
-		klap_print(bp, length);
-		break;
-#endif
-
 	default:
 		ND_PRINT("%u > %u at-lap#%u %u",
 		    GET_U_1(lp->src), GET_U_1(lp->dst), GET_U_1(lp->type),
@@ -176,6 +224,9 @@ llap_print(netdissect_options *ndo,
 		break;
 	}
 	return (hdrlen);
+invalid:
+	nd_print_invalid(ndo);
+	return length;
 }
 
 /*
@@ -195,12 +246,8 @@ atalk_print(netdissect_options *ndo,
             ND_PRINT("AT ");
 
 	if (length < ddpSize) {
-		ND_PRINT(" [|ddp %u]", length);
-		return;
-	}
-	if (!ND_TTEST_LEN(bp, ddpSize)) {
-		ND_PRINT(" [|ddp]");
-		return;
+		ND_PRINT(" (length %u is too small)", length);
+		goto invalid;
 	}
 	dp = (const struct atDDP *)bp;
 	snet = GET_BE_U_2(dp->srcNet);
@@ -213,6 +260,9 @@ atalk_print(netdissect_options *ndo,
 	length -= ddpSize;
 	ddp_print(ndo, bp, length, GET_U_1(dp->type), snet,
 		  GET_U_1(dp->srcNode), GET_U_1(dp->srcSkt));
+	return;
+invalid:
+	nd_print_invalid(ndo);
 }
 
 /* XXX should probably pass in the snap header and do checks like arp_print() */
@@ -222,23 +272,21 @@ aarp_print(netdissect_options *ndo,
 {
 	const struct aarp *ap;
 
-#define AT(member) ataddr_string(ndo, (ap->member[1]<<8)|ap->member[2],ap->member[3])
+#define AT(member) ataddr_string(ndo, \
+	(GET_U_1(&ap->member[1])<<8)|GET_U_1(&ap->member[2]), \
+	GET_U_1(&ap->member[3]))
 
 	ndo->ndo_protocol = "aarp";
 	ND_PRINT("aarp ");
 	ap = (const struct aarp *)bp;
-	if (!ND_TTEST_SIZE(ap)) {
-		/* Just bail if we don't have the whole chunk. */
-		nd_print_trunc(ndo);
-		return;
-	}
 	if (length < sizeof(*ap)) {
-		ND_PRINT(" [|aarp %u]", length);
-		return;
+		ND_PRINT(" (length %u is too small)", length);
+		goto invalid;
 	}
+	ND_TCHECK_SIZE(ap);
 	if (GET_BE_U_2(ap->htype) == 1 &&
 	    GET_BE_U_2(ap->ptype) == ETHERTYPE_ATALK &&
-	    GET_U_1(ap->halen) == 6 && GET_U_1(ap->palen) == 4 )
+	    GET_U_1(ap->halen) == MAC_ADDR_LEN && GET_U_1(ap->palen) == 4)
 		switch (GET_BE_U_2(ap->op)) {
 
 		case 1:				/* request */
@@ -256,6 +304,9 @@ aarp_print(netdissect_options *ndo,
 	ND_PRINT("len %u op %u htype %u ptype %#x halen %u palen %u",
 	    length, GET_BE_U_2(ap->op), GET_BE_U_2(ap->htype),
 	    GET_BE_U_2(ap->ptype), GET_U_1(ap->halen), GET_U_1(ap->palen));
+	return;
+invalid:
+	nd_print_invalid(ndo);
 }
 
 /*
@@ -294,14 +345,10 @@ atp_print(netdissect_options *ndo,
 	uint8_t control;
 	uint32_t data;
 
-	if ((const u_char *)(ap + 1) > ndo->ndo_snapend) {
-		/* Just bail if we don't have the whole chunk. */
-		nd_print_trunc(ndo);
-		return;
-	}
+	ndo->ndo_protocol = "atp";
 	if (length < sizeof(*ap)) {
-		ND_PRINT(" [|atp %u]", length);
-		return;
+		ND_PRINT(" (ATP length %u is too small)", length);
+		goto invalid;
 	}
 	length -= sizeof(*ap);
 	control = GET_U_1(ap->control);
@@ -383,6 +430,9 @@ atp_print(netdissect_options *ndo,
 	data = GET_BE_U_4(ap->userData);
 	if (data != 0)
 		ND_PRINT(" 0x%x", data);
+	return;
+invalid:
+	nd_print_invalid(ndo);
 }
 
 static void
@@ -425,37 +475,22 @@ nbp_print(netdissect_options *ndo,
 		(const struct atNBPtuple *)((const u_char *)np + nbpHeaderSize);
 	uint8_t control;
 	u_int i;
-	const u_char *ep;
 
-	if (length < nbpHeaderSize) {
-		ND_PRINT(" truncated-nbp %u", length);
-		return;
-	}
-
-	length -= nbpHeaderSize;
-	if (length < 8) {
+	if (length < nbpHeaderSize + 8) {
 		/* must be room for at least one tuple */
-		ND_PRINT(" truncated-nbp %u", length + nbpHeaderSize);
-		return;
+		ND_PRINT(" undersized-nbp %u", length);
+		goto invalid;
 	}
-	/* ep points to end of available data */
-	ep = ndo->ndo_snapend;
-	if ((const u_char *)tp > ep) {
-		nd_print_trunc(ndo);
-		return;
-	}
+	length -= nbpHeaderSize;
 	control = GET_U_1(np->control);
-	switch (i = (control & 0xf0)) {
+	ND_PRINT(" nbp-%s", tok2str(nbp_str, "0x%x", control & 0xf0));
+	ND_PRINT(" %u", GET_U_1(np->id));
+	switch (control & 0xf0) {
 
 	case nbpBrRq:
 	case nbpLkUp:
-		ND_PRINT(i == nbpLkUp? " nbp-lkup %u:":" nbp-brRq %u:",
-			 GET_U_1(np->id));
-		if ((const u_char *)(tp + 1) > ep) {
-			nd_print_trunc(ndo);
-			return;
-		}
-		(void)nbp_name_print(ndo, tp, ep);
+		ND_PRINT(":");
+		(void)nbp_name_print(ndo, tp);
 		/*
 		 * look for anomalies: the spec says there can only
 		 * be one tuple, the address must match the source
@@ -475,63 +510,50 @@ nbp_print(netdissect_options *ndo,
 		break;
 
 	case nbpLkUpReply:
-		ND_PRINT(" nbp-reply %u:", GET_U_1(np->id));
+		ND_PRINT(":");
 
 		/* print each of the tuples in the reply */
 		for (i = control & 0xf; i != 0 && tp; i--)
-			tp = nbp_tuple_print(ndo, tp, ep, snet, snode, skt);
+			tp = nbp_tuple_print(ndo, tp, snet, snode, skt);
 		break;
 
 	default:
-		ND_PRINT(" nbp-0x%x  %u (%u)", control, GET_U_1(np->id),
-			 length);
+		ND_PRINT("  (%u)", length);
 		break;
 	}
+	return;
+invalid:
+	nd_print_invalid(ndo);
 }
 
 /* print a counted string */
 static const u_char *
 print_cstring(netdissect_options *ndo,
-              const u_char *cp, const u_char *ep)
+              const u_char *cp)
 {
 	u_int length;
 
-	if (cp >= ep) {
-		nd_print_trunc(ndo);
-		return (0);
-	}
 	length = GET_U_1(cp);
 	cp++;
 
 	/* Spec says string can be at most 32 bytes long */
 	if (length > 32) {
 		ND_PRINT("[len=%u]", length);
-		return (0);
+		ND_TCHECK_LEN(cp, length);
+		return NULL;
 	}
-	while (length != 0) {
-		if (cp >= ep) {
-			nd_print_trunc(ndo);
-			return (0);
-		}
-		fn_print_char(ndo, GET_U_1(cp));
-		cp++;
-		length--;
-	}
-	return (cp);
+	nd_printjn(ndo, cp, length);
+	return cp + length;
 }
 
 static const struct atNBPtuple *
 nbp_tuple_print(netdissect_options *ndo,
-                const struct atNBPtuple *tp, const u_char *ep,
+                const struct atNBPtuple *tp,
                 u_short snet, u_char snode, u_char skt)
 {
 	const struct atNBPtuple *tpn;
 
-	if ((const u_char *)(tp + 1) > ep) {
-		nd_print_trunc(ndo);
-		return 0;
-	}
-	tpn = nbp_name_print(ndo, tp, ep);
+	tpn = nbp_name_print(ndo, tp);
 
 	/* if the enumerator isn't 1, print it */
 	if (GET_U_1(tp->enumerator) != 1)
@@ -552,7 +574,7 @@ nbp_tuple_print(netdissect_options *ndo,
 
 static const struct atNBPtuple *
 nbp_name_print(netdissect_options *ndo,
-               const struct atNBPtuple *tp, const u_char *ep)
+               const struct atNBPtuple *tp)
 {
 	const u_char *cp = (const u_char *)tp + nbpTupleSize;
 
@@ -560,13 +582,13 @@ nbp_name_print(netdissect_options *ndo,
 
 	/* Object */
 	ND_PRINT("\"");
-	if ((cp = print_cstring(ndo, cp, ep)) != NULL) {
+	if ((cp = print_cstring(ndo, cp)) != NULL) {
 		/* Type */
 		ND_PRINT(":");
-		if ((cp = print_cstring(ndo, cp, ep)) != NULL) {
+		if ((cp = print_cstring(ndo, cp)) != NULL) {
 			/* Zone */
 			ND_PRINT("@");
-			if ((cp = print_cstring(ndo, cp, ep)) != NULL)
+			if ((cp = print_cstring(ndo, cp)) != NULL)
 				ND_PRINT("\"");
 		}
 	}
@@ -636,7 +658,7 @@ ataddr_string(netdissect_options *ndo,
 					if (tp->name == NULL)
 						(*ndo->ndo_error)(ndo,
 						    S_ERR_ND_MEM_ALLOC,
-						    "ataddr_string: strdup(nambuf)");
+						    "%s: strdup(nambuf)", __func__);
 				}
 				fclose(fp);
 			}
@@ -661,7 +683,7 @@ ataddr_string(netdissect_options *ndo,
 			tp->name = strdup(nambuf);
 			if (tp->name == NULL)
 				(*ndo->ndo_error)(ndo, S_ERR_ND_MEM_ALLOC,
-					"ataddr_string: strdup(nambuf)");
+					"%s: strdup(nambuf)", __func__);
 			return (tp->name);
 		}
 
@@ -674,11 +696,15 @@ ataddr_string(netdissect_options *ndo,
 	tp->name = strdup(nambuf);
 	if (tp->name == NULL)
 		(*ndo->ndo_error)(ndo, S_ERR_ND_MEM_ALLOC,
-				  "ataddr_string: strdup(nambuf)");
+				  "%s: strdup(nambuf)", __func__);
 
 	return (tp->name);
 }
 
+#define rtmpSkt 1
+#define nbpSkt  2
+#define echoSkt 4
+#define zipSkt  6
 static const struct tok skt2str[] = {
 	{ rtmpSkt,	"rtmp" },	/* routing table maintenance */
 	{ nbpSkt,	"nis" },	/* name info socket */

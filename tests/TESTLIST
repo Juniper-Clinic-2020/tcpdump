@@ -19,6 +19,24 @@ print-XX	print-flags.pcap	print-capXX.out	-XX
 print-A		print-flags.pcap	print-A.out	-A
 print-AA	print-flags.pcap	print-AA.out	-AA
 
+# TCP 3-Way Handshake test, nano precision
+# Use "no -t", -t, -tt, -ttt, -tttt, -ttttt options for more code coverage
+# in timestamp printing functions
+# micro outputs with -q
+tcp-handshake-micro tcp-handshake-nano.pcap tcp-handshake-micro.out -q
+tcp-handshake-micro-t tcp-handshake-nano.pcap tcp-handshake-micro-t.out -t -q
+tcp-handshake-micro-tt tcp-handshake-nano.pcap tcp-handshake-micro-tt.out -tt -q
+tcp-handshake-micro-ttt tcp-handshake-nano.pcap tcp-handshake-micro-ttt.out -ttt -q
+tcp-handshake-micro-tttt tcp-handshake-nano.pcap tcp-handshake-micro-tttt.out -tttt -q
+tcp-handshake-micro-ttttt tcp-handshake-nano.pcap tcp-handshake-micro-ttttt.out -ttttt -q
+# nano outputs with -q
+tcp-handshake-nano tcp-handshake-nano.pcap tcp-handshake-nano.out -q --nano
+tcp-handshake-nano-t tcp-handshake-nano.pcap tcp-handshake-nano-t.out -t -q --nano
+tcp-handshake-nano-tt tcp-handshake-nano.pcap tcp-handshake-nano-tt.out -tt -q --nano
+tcp-handshake-nano-ttt tcp-handshake-nano.pcap tcp-handshake-nano-ttt.out -ttt -q --nano
+tcp-handshake-nano-tttt tcp-handshake-nano.pcap tcp-handshake-nano-tttt.out -tttt -q --nano
+tcp-handshake-nano-ttttt tcp-handshake-nano.pcap tcp-handshake-nano-ttttt.out -ttttt -q --nano
+
 # BGP tests
 bgp_vpn_attrset bgp_vpn_attrset.pcap bgp_vpn_attrset.out -v
 mpbgp-linklocal-nexthop mpbgp-linklocal-nexthop.pcap mpbgp-linklocal-nexthop.out -v
@@ -49,8 +67,7 @@ dsa		dsa.pcap		dsa.out
 dsa-e		dsa.pcap		dsa-e.out	-e
 
 # EAP tests
-eapon1		eapon1.pcap		eapon1.out
-eapon1-v	eapon1.pcap		eapon1-v.out	-v
+# now in smb.tests
 
 # Marvell DSA tag tests
 edsa		edsa.pcap		edsa.out
@@ -111,9 +128,10 @@ daoack01        rpl-26-senddaoack.pcap      rpl-26-senddaovv.out -v -v -v
 
 # IPNET encapsulated site
 e1000g		e1000g.pcap		e1000g.out
+e1000g-e	e1000g.pcap		e1000g-e.out	-e
 
 # IPX/Netware packets
-ipx		ipx.pcap		ipx.out
+# now in smb.tests
 
 # IPX/Netware invalid
 ipx-invalid-length ipx-invalid-length.pcap ipx-invalid-length.out
@@ -229,7 +247,8 @@ msnlb2		msnlb2.pcapng		msnlb2.out
 mptcp-v0	mptcp-v0.pcap		mptcp-v0.out
 mptcp-v1	mptcp-v1.pcap		mptcp-v1.out
 mptcp-fclose	mptcp-fclose.pcap	mptcp-fclose.out
-mptcp-aa-v1     mptcp-aa-v1.pcap        mptcp-aa-v1.out
+mptcp-aa-v1	mptcp-aa-v1.pcap	mptcp-aa-v1.out
+mptcp-aa-echo	mptcp-aa-echo.pcap	mptcp-aa-echo.out
 
 # TFO tests
 tfo		tfo-5c1fa7f9ae91.pcap	tfo.out
@@ -400,6 +419,10 @@ dhcp-mud	dhcp-mud.pcap		dhcp-mud.out	-vv
 # VXLAN tests
 vxlan  vxlan.pcap  vxlan.out -e
 
+# PPTP tests
+pptp pptp.pcap pptp.out
+pptp-v pptp.pcap pptp-v.out -v
+
 # CVEs 2014 malformed packets from Steffen Bauch
 cve-2014-8767-OLSR cve-2014-8767-OLSR.pcap cve-2014-8767-OLSR.out -v
 cve-2014-8768-Geonet cve-2014-8768-Geonet.pcap cve-2014-8768-Geonet.out -v
@@ -567,7 +590,7 @@ slip-compressed_sl_print-oobr slip-compressed_sl_print-oobr.pcap slip-compressed
 slip-sliplink_print-oobr slip-sliplink_print-oobr.pcap slip-sliplink_print-oobr.out -e
 
 # bad packets from Otto Airamo and Antti Levomäki
-nbns-valgrind		nbns-valgrind.pcap		nbns-valgrind.out	-vvv -e
+# one more in smb.tests
 arp-oobr		arp-oobr.pcap			arp-oobr.out	-vvv -e
 icmp-cksum-oobr-1	icmp-cksum-oobr-1.pcap		icmp-cksum-oobr-1.out	-vvv -e
 icmp-cksum-oobr-2	icmp-cksum-oobr-2.pcap		icmp-cksum-oobr-2.out	-vvv -e
@@ -702,14 +725,14 @@ babel_update_oobr	babel_update_oobr.pcap		babel_update_oobr.out
 ospf6_print_lshdr-oobr ospf6_print_lshdr-oobr.pcap ospf6_print_lshdr-oobr.out -vv
 rpl-dao-oobr rpl-dao-oobr.pcap rpl-dao-oobr.out -vv
 hncp_prefix-oobr hncp_prefix-oobr.pcap hncp_prefix-oobr.out -vvv
-smb_print_trans-oobr1 smb_print_trans-oobr1.pcap smb_print_trans-oobr1.out -vv
+# one more in smb.tests
 
 # bad packets from Ryan Ackroyd
 ieee802.11_meshhdr-oobr ieee802.11_meshhdr-oobr.pcap ieee802.11_meshhdr-oobr.out -H
 dccp_options-oobr dccp_options-oobr.pcap dccp_options-oobr.out -vv
 
 # bad packets from Philippe Antoine
-smb_print_trans-oobr2 smb_print_trans-oobr2.pcap smb_print_trans-oobr2.out -vv
+# now in smb.tests
 
 # RTP tests
 # fuzzed pcap
@@ -720,13 +743,13 @@ rtp-seg-fault-2  rtp-seg-fault-2.pcapng  rtp-seg-fault-2.out  -v -T rtp
 ssh			ssh.pcap		ssh.out
 
 # MACsec
-macsec-encrypted       macsec-encrypted.pcap          macsec-encrypted.out        -t -e
-macsec-changed         macsec-changed.pcap            macsec-changed.out          -t -e
-macsec-integonly       macsec-integonly.pcap          macsec-integonly.out        -t -e
-macsec-snap            macsec-snap.pcap               macsec-snap.out             -t -e
-macsec-short-shorter   macsec-short-shorter.pcap      macsec-short-shorter.out    -t -e
-macsec-short-longer    macsec-short-longer.pcap       macsec-short-longer.out     -t -e
-macsec-short-valid     macsec-short-valid.pcap        macsec-short-valid.out      -t -e
+macsec-encrypted     macsec-encrypted.pcap     macsec-encrypted.out     -e
+macsec-changed       macsec-changed.pcap       macsec-changed.out       -e
+macsec-integonly     macsec-integonly.pcap     macsec-integonly.out     -e
+macsec-snap          macsec-snap.pcap          macsec-snap.out          -e
+macsec-short-shorter macsec-short-shorter.pcap macsec-short-shorter.out -e
+macsec-short-longer  macsec-short-longer.pcap  macsec-short-longer.out  -e
+macsec-short-valid   macsec-short-valid.pcap   macsec-short-valid.out   -e
 
 # NFS tests
 # fuzzed pcap
@@ -803,14 +826,18 @@ huge-tipc-messages	huge-tipc-messages.pcap	huge-tipc-messages.out
 
 # CVE-2018-10105 bad packets from Luis Rocha
 sflow_print-segv sflow_print-segv.pcap sflow_print-segv.out -v
-smb_data_print-oobr smb_data_print-oobr.pcapng smb_data_print-oobr.out -vv
-smb_data_print-segv smb_data_print-segv.pcapng smb_data_print-segv.out -vv
+# two more in smb.tests
+
 #ptp tests
 ptp         ptp.pcap    ptp.out
 ptp_ethernet	ptp_ethernet.pcap	ptp_ethernet.out	-e
 
 # bad packets from Jason Xiaole
 ldp_tlv_print-oobr ldp_tlv_print-oobr.pcap ldp_tlv_print-oobr.out -v
+
+# bad packets from Hardik Shah
+dns-badlabel	dns-badlabel.pcap	dns-badlabel.out	-vv
+igrp-oobr	igrp-oobr.pcap		igrp-oobr.out		-v
 
 #someip tests
 someip1		someip1.pcap	someip1.out

@@ -99,7 +99,7 @@ typedef unsigned char nd_ipv6[16];
 /*
  * Use this for MAC addresses.
  */
-#define MAC_ADDR_LEN	6		/* length of MAC addresses */
+#define MAC_ADDR_LEN	6U		/* length of MAC addresses */
 typedef unsigned char nd_mac_addr[MAC_ADDR_LEN];
 
 /*
@@ -391,10 +391,10 @@ extern void unsigned_relts_print(netdissect_options *, uint32_t);
 
 extern void fn_print_char(netdissect_options *, u_char);
 extern void fn_print_str(netdissect_options *, const u_char *);
-extern int nd_print(netdissect_options *, const u_char *, const u_char *);
 extern u_int nd_printztn(netdissect_options *, const u_char *, u_int, const u_char *);
 extern int nd_printn(netdissect_options *, const u_char *, u_int, const u_char *);
-extern int nd_printzp(netdissect_options *, const u_char *, u_int, const u_char *);
+extern void nd_printjn(netdissect_options *, const u_char *, u_int);
+extern void nd_printjnp(netdissect_options *, const u_char *, u_int);
 
 /*
  * Flags for txtproto_print().
@@ -462,7 +462,7 @@ extern const struct tok *uint2tokary_internal(const struct uint_tokary[], const 
 
 extern if_printer lookup_printer(int);
 
-#define ND_DEBUG {printf(" [%s:%d %s] ", __FILE__, __LINE__, __FUNCTION__); fflush(stdout);}
+#define ND_DEBUG {printf(" [%s:%d %s] ", __FILE__, __LINE__, __func__); fflush(stdout);}
 
 /* The DLT printer routines */
 
@@ -567,7 +567,7 @@ extern const char *bgp_vpn_rd_print(netdissect_options *, const u_char *);
 extern void bootp_print(netdissect_options *, const u_char *, u_int);
 extern void calm_fast_print(netdissect_options *, const u_char *, u_int, const struct lladdr_info *);
 extern void carp_print(netdissect_options *, const u_char *, u_int, u_int);
-extern void cdp_print(netdissect_options *, const u_char *, u_int, u_int);
+extern void cdp_print(netdissect_options *, const u_char *, u_int);
 extern void cfm_print(netdissect_options *, const u_char *, u_int);
 extern u_int chdlc_print(netdissect_options *, const u_char *, u_int);
 extern void cisco_autorp_print(netdissect_options *, const u_char *, u_int);

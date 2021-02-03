@@ -41,11 +41,11 @@ ah_print(netdissect_options *ndo, const u_char *bp)
 	uint8_t ah_len;
 	u_int ah_hdr_len;
 	uint16_t reserved;
+	const u_char *p;
 
 	ndo->ndo_protocol = "ah";
 	ah = (const struct ah *)bp;
 
-	ND_TCHECK_SIZE(ah);
 	nd_print_protocol_caps(ndo);
 /*
  * RFC4302
@@ -65,12 +65,11 @@ ah_print(netdissect_options *ndo, const u_char *bp)
 	if (reserved)
 		ND_PRINT("reserved=0x%x[MustBeZero],", reserved);
 	ND_PRINT("spi=0x%08x,", GET_BE_U_4(ah->ah_spi));
-	ND_PRINT("seq=0x%x", GET_BE_U_4(ah->ah_seq));
-	ND_TCHECK_LEN(bp, ah_hdr_len);
+	ND_PRINT("seq=0x%x,", GET_BE_U_4(ah->ah_seq));
+	ND_PRINT("icv=0x");
+	for (p = (const u_char *)(ah + 1); p < bp + ah_hdr_len; p++)
+		ND_PRINT("%02x", GET_U_1(p));
 	ND_PRINT("): ");
 
 	return ah_hdr_len;
-trunc:
-	nd_print_trunc(ndo);
-	return -1;
 }
