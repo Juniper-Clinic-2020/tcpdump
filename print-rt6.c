@@ -43,7 +43,8 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 	const struct ip6_crh32 *crh32;
 	u_int i, len, type, sids_per_word, sid_count, min_crh_len;
 	const u_char *p;
-	const nd_uint16_t *crh16_sids;
+	nd_uint16_t *crh16_sids;
+	nd_uint32_t *crh32_sids;
 
 	ndo->ndo_protocol = "rt6";
 
@@ -118,7 +119,7 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 		if (GET_U_1(crh16->crh16_segleft) <= 2) {
 			min_crh_len = 0;	
 		}
-		ND_PRINT(", (crh16) there are %u SID's, ", sid_count);
+		ND_PRINT(", CRH-16, Segment Identifiers: ");
 
 		if (min_crh_len) {
 			min_crh_len = ((GET_U_1(crh16->crh16_segleft) - 2) / sids_per_word);
@@ -132,9 +133,12 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 		}
 
 		/* Grab & print each 16 bit Segment ID (SID) */
-		crh16_sids = (const nd_uint16_t *) crh16->crh16_sids;
+		crh16_sids = (nd_uint16_t *) crh16->crh16_sids;
 		for (i = 0; i < sid_count && crh16_sids; i++) {
-			ND_PRINT(", SID[%u] = %u", i, GET_BE_U_2(crh16_sids));
+			ND_PRINT("SID[%d] = %d", i, GET_BE_U_2(crh16_sids));
+			if (i != sid_count - 1) {
+				ND_PRINT(", ");
+			}
 			crh16_sids++;
 		}
 		ND_PRINT(") ");
@@ -142,13 +146,14 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 		break;
 
 	case IPV6_RTHDR_TYPE_6:
+		/* Length is measured in 8-octet units, excluding the first 8 octets */
 		crh32 = (const struct ip6_crh32 *)dp;
 		sids_per_word = 2;
-		sid_count = len * 2 + 1; 
+		sid_count = len * 2 + 1; /* CRH must terminate on 64-bit boundary */ 
 		if (GET_U_1(crh32->crh32_segleft) <= 1) {
 			min_crh_len = 0;	
 		}
-		ND_PRINT(", (crh16) there are %u SID's, ", sid_count);
+		ND_PRINT(", CRH-32, Segment Identifiers: ");
 
 		if (min_crh_len) {
 			min_crh_len = ((GET_U_1(crh32->crh32_segleft) - 1) / sids_per_word);
@@ -160,33 +165,17 @@ rt6_print(netdissect_options *ndo, const u_char *bp, const u_char *bp2 _U_)
 		if (min_crh_len > len) {
 			ND_PRINT("IPv6 CRH min length must not exceed header length of %u", len);
 		}
-		ND_PRINT(") ");
-		return((GET_U_1(crh32->crh32_len) + 1) << 3);
-		break;
 
-	default:
-		goto trunc;
-		break;
-
-	case IPV6_RTHDR_TYPE_6:
-		crh32 = (const struct ip6_crh32 *)dp;
-		sids_per_word = 2;
-		sid_count = len * 2 + 1; 
-		if (GET_U_1(crh32->crh32_segleft) <= 1) {
-			min_crh_len = 0;	
-		}
-		ND_PRINT(", (crh16) there are %u SID's, ", sid_count);
-
-		if (min_crh_len) {
-			min_crh_len = ((GET_U_1(crh32->crh32_segleft) - 1) / sids_per_word);
-			if ((GET_U_1(crh32->crh32_segleft) - 1) % sids_per_word) {
-				min_crh_len++;
+		/* Grab & print each 32 bit Segment ID (SID) */
+		crh32_sids = (nd_uint32_t *) crh32->crh32_sids;
+		for (i = 0; i < sid_count && crh32_sids; i++) {
+			ND_PRINT("SID[%d] = %d", i, GET_BE_U_4(crh32_sids));
+			if (i != sid_count - 1) {
+				ND_PRINT(", ");
 			}
+			crh32_sids++;
 		}
 
-		if (min_crh_len > len) {
-			ND_PRINT("IPv6 CRH min length must not exceed header length of %u", len);
-		}
 		ND_PRINT(") ");
 		return((GET_U_1(crh32->crh32_len) + 1) << 3);
 		break;
