@@ -382,6 +382,28 @@ extern void nd_pop_all_packet_info(netdissect_options *);
  */
 #define ND_BYTES_AVAILABLE_AFTER(p) ND_BYTES_BETWEEN(ndo->ndo_snapend, (p))
 
+/* Check length < minimum for invalid packet with a custom message, format %u */
+#define ND_LCHECKMSG_U(length, minimum, what) \
+if ((length) < (minimum)) { \
+ND_PRINT(" [%s %u < %u]", (what), (length), (minimum)); \
+goto invalid; \
+}
+
+/* Check length < minimum for invalid packet with #length message, format %u */
+#define ND_LCHECK_U(length, minimum) \
+ND_LCHECKMSG_U((length), (minimum), (#length))
+
+/* Check length < minimum for invalid packet with a custom message, format %zu */
+#define ND_LCHECKMSG_ZU(length, minimum, what) \
+if ((length) < (minimum)) { \
+ND_PRINT(" [%s %u < %zu]", (what), (length), (minimum)); \
+goto invalid; \
+}
+
+/* Check length < minimum for invalid packet with #length message, format %zu */
+#define ND_LCHECK_ZU(length, minimum) \
+ND_LCHECKMSG_ZU((length), (minimum), (#length))
+
 #define ND_PRINT(...) (ndo->ndo_printf)(ndo, __VA_ARGS__)
 #define ND_DEFAULTPRINT(ap, length) (*ndo->ndo_default_print)(ndo, ap, length)
 
@@ -596,8 +618,8 @@ extern void geonet_print(netdissect_options *, const u_char *, u_int, const stru
 extern void gre_print(netdissect_options *, const u_char *, u_int);
 extern int hbhopt_process(netdissect_options *, const u_char *, int *, uint32_t *);
 extern void hex_and_ascii_print(netdissect_options *, const char *, const u_char *, u_int);
-extern void hex_print(netdissect_options *, const char *ident, const u_char *cp, u_int);
-extern void hex_print_with_offset(netdissect_options *, const char *ident, const u_char *cp, u_int, u_int);
+extern void hex_print(netdissect_options *, const char *indent, const u_char *cp, u_int);
+extern void hex_print_with_offset(netdissect_options *, const char *indent, const u_char *cp, u_int, u_int);
 extern void hncp_print(netdissect_options *, const u_char *, u_int);
 extern void hsrp_print(netdissect_options *, const u_char *, u_int);
 extern void http_print(netdissect_options *, const u_char *, u_int);
@@ -704,7 +726,7 @@ extern void udp_print(netdissect_options *, const u_char *, u_int, const u_char 
 extern int vjc_print(netdissect_options *, const u_char *, u_short);
 extern void vqp_print(netdissect_options *, const u_char *, u_int);
 extern void vrrp_print(netdissect_options *, const u_char *, u_int, const u_char *, int);
-extern void vtp_print(netdissect_options *, const u_char *, u_int);
+extern void vtp_print(netdissect_options *, const u_char *, const u_int);
 extern void vxlan_gpe_print(netdissect_options *, const u_char *, u_int);
 extern void vxlan_print(netdissect_options *, const u_char *, u_int);
 extern void wb_print(netdissect_options *, const u_char *, u_int);

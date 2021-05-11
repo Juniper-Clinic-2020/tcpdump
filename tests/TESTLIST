@@ -37,6 +37,11 @@ tcp-handshake-nano-ttt tcp-handshake-nano.pcap tcp-handshake-nano-ttt.out -ttt -
 tcp-handshake-nano-tttt tcp-handshake-nano.pcap tcp-handshake-nano-tttt.out -tttt -q --nano
 tcp-handshake-nano-ttttt tcp-handshake-nano.pcap tcp-handshake-nano-ttttt.out -ttttt -q --nano
 
+# TCP with data in the RST segment
+tcp_rst_data tcp_rst_data.pcap tcp_rst_data.out -v
+# TCP with data in the RST segment, truncated example
+tcp_rst_data-trunc tcp_rst_data-trunc.pcap tcp_rst_data-trunc.out -v
+
 # BGP tests
 bgp_vpn_attrset bgp_vpn_attrset.pcap bgp_vpn_attrset.out -v
 mpbgp-linklocal-nexthop mpbgp-linklocal-nexthop.pcap mpbgp-linklocal-nexthop.out -v
@@ -104,6 +109,7 @@ mpls-over-udp-v  mpls-over-udp.pcap  mpls-over-udp-v.out -v
 
 # OSPF tests
 ospf-gmpls	ospf-gmpls.pcap				ospf-gmpls.out		-v
+ospf-nssa-bitnt	ospf-nssa-bitnt.pcap			ospf-nssa-bitnt.out	-v
 ospf3_ah-vv	OSPFv3_with_AH.pcap			ospf3_ah-vv.out		-v -v
 ospf3_auth-vv	ospf3_auth.pcapng			ospf3_auth-vv.out 	-v -v
 ospf3_bc-vv	OSPFv3_broadcast_adjacency.pcap		ospf3_bc-vv.out		-v -v
@@ -502,7 +508,7 @@ bfd-raw-auth-sha1 bfd-raw-auth-sha1.pcap bfd-raw-auth-sha1.out
 bfd-raw-auth-sha1-v bfd-raw-auth-sha1.pcap bfd-raw-auth-sha1-v.out -v
 
 # bad packets from Hanno Böck
-heap-overflow-1	heap-overflow-1.pcap		heap-overflow-1.out	-v
+# heap-overflow-1 is in non-bsd.tests
 heap-overflow-2	heap-overflow-2.pcap		heap-overflow-2.out	-v
 heapoverflow-atalk_print	heapoverflow-atalk_print.pcap	heapoverflow-atalk_print.out	-v
 heapoverflow-EXTRACT_16BITS	heapoverflow-EXTRACT_16BITS.pcap	heapoverflow-EXTRACT_16BITS.out	-v
@@ -815,6 +821,8 @@ bfd-multihop	bfd-multihop.pcap	bfd-multihop.out
 bfd-multihop-v	bfd-multihop.pcap	bfd-multihop-v.out	-v
 bfd-lag		bfd-lag.pcap		bfd-lag.out
 bfd-lag-v	bfd-lag.pcap		bfd-lag-v.out		-v
+bfd-sbfd	bfd-sbfd.pcap		bfd-sbfd.out
+bfd-sbfd-v	bfd-sbfd.pcap		bfd-sbfd-v.out		-v
 
 # Arista Vendor Specific Tests
 arista-ether             arista_ether.pcap        arista_ether.out
